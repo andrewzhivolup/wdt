@@ -22,14 +22,11 @@ def resource_path(relative_path):
         return relative_path
 
 class AutoClicker:
-    def __init__(self, window_title, max_clicks, windows_count):
+    def __init__(self, window_title, max_clicks):
         self.window_title = window_title
         self.running = False
-        self.clicked_points = []
         self.iteration_count = 0
         self.max_clicks = max_clicks
-        self.windows_count = windows_count
-        self.max_clicks_for_all_windows = int(max_clicks) * int(windows_count)
 
         self.templates_plays = [
             cv2.cvtColor(cv2.imread(img, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2GRAY) for img in CLICK_IMAGES
@@ -50,6 +47,8 @@ class AutoClicker:
 
     def toggle_script(self):
         self.running = not self.running
+        print(f'Кликов было: {self.iteration_count}')
+        self.iteration_count = 0
         r_text = "вкл" if self.running else "выкл"
         print(f'Статус изменен: {r_text}')
 
@@ -94,15 +93,21 @@ class AutoClicker:
                     }
                     img = np.array(sct.grab(monitor))
 
-                    random_float = random.uniform(0.4, 0.6)
+                    if self.iteration_count % 1000 == 0:
+                        sleep = 1
+                    else:
+                        sleep = random.uniform(0.2, 0.5)
 
-                    time.sleep(random_float)
+                    time.sleep(sleep)
+
+                    self.iteration_count += 1
+
                     for tp in self.templates_plays:
                         self.find_and_click_image(tp, img, monitor)
 
 
 if __name__ == "__main__":
-    CLICK_IMAGES = [resource_path("media\\wepc1.png")]
+    CLICK_IMAGES = [resource_path("media\\wepc.png")]
 
     # ограничение кликов
     # answer = None
@@ -112,17 +117,9 @@ if __name__ == "__main__":
     #         answer = 70000
     max_clicks = 70000
 
-    # ограничение окон 
-    # answer = None
-    # while answer is None:
-    #     answer = input("Укажите максимальное количество окон (по-умолчнию: 1): ")
-    #     if answer.isdigit() == False:
-    #         answer = 1
-    windows_count = 1
-
     print('Для запуска скрипта нажми "ё" (`) на клавиатуре')
 
-    auto_clicker = AutoClicker("LDPlayer", max_clicks, windows_count)
+    auto_clicker = AutoClicker("LDPlayer", max_clicks)
     try:
         auto_clicker.start()
     except Exception as e:
