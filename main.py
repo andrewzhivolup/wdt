@@ -37,12 +37,12 @@ class AutoClicker:
 
     @staticmethod
     def click_at(x, y):
-        random_int1 = random.randint(25, 55)
-        random_int2 = random.randint(26, 54)
-        random_int3 = random.randint(25, 55)
-        random_int4 = random.randint(26, 54)
-        _x = x + int(random_int1) - int(random_int3)
-        _y = y + int(random_int2) - int(random_int4)
+        random_x_1 = random.randint(25, 55)
+        random_x_2 = random.randint(25, 55)
+        random_y_1 = random.randint(25, 55)
+        random_y_2 = random.randint(25, 55)
+        _x = x + int(random_x_1) - int(random_x_2)
+        _y = y + int(random_y_1) - int(random_y_2)
 
         win32api.SetCursorPos((_x, _y))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, _x, _y, 0, 0)
