@@ -22,24 +22,27 @@ def resource_path(relative_path):
         return relative_path
 
 class AutoClicker:
-    def __init__(self, window_title, max_clicks):
+    def __init__(self, window_title):
         self.window_title = window_title
         self.running = False
         self.iteration_count = 0
-        self.max_clicks = max_clicks
 
         self.templates_plays = [
             cv2.cvtColor(cv2.imread(img, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2GRAY) for img in CLICK_IMAGES
         ]  # картинки по которым нужно кликать
 
     @staticmethod
-    def click_at(x, y):
+    def click_at(x, y, is_random):
         random_x_1 = random.randint(25, 55)
         random_x_2 = random.randint(25, 55)
         random_y_1 = random.randint(25, 55)
         random_y_2 = random.randint(25, 55)
-        _x = x + int(random_x_1) - int(random_x_2)
-        _y = y + int(random_y_1) - int(random_y_2)
+        if is_random:
+            _x = x + int(random_x_1) - int(random_x_2)
+            _y = y + int(random_y_1) - int(random_y_2)
+        else: 
+            _x = x
+            _y = y
 
         win32api.SetCursorPos((_x, _y))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, _x, _y, 0, 0)
@@ -63,10 +66,25 @@ class AutoClicker:
             template_height, template_width = template_gray.shape
             center_x = max_loc[0] + template_width // 2 + monitor["left"]
             center_y = max_loc[1] + template_height // 2 + monitor["top"]
-            self.click_at(center_x, center_y)
+            self.click_at(center_x, center_y, True)
             return True
 
         return False
+    
+    def find_image(self, template_gray, screen, monitor):
+        screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGRA2GRAY)
+
+        result = cv2.matchTemplate(screen_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+        if max_val >= 0.6:
+            template_height, template_width = template_gray.shape
+            center_x = max_loc[0] + template_width // 2 + monitor["left"]
+            center_y = max_loc[1] + template_height // 2 + monitor["top"]
+            return [center_x, center_y]
+
+        return [-1,-1]
+
 
     def start(self):
         windows = gw.getWindowsWithTitle(self.window_title)
@@ -83,6 +101,9 @@ class AutoClicker:
             grave_key_code = 41
             keyboard.add_hotkey(grave_key_code, self.toggle_script)
 
+            wepc = self.templates_plays[0]
+            button = self.templates_plays[1]
+
             while True:
                 if self.running:
                     monitor = {
@@ -93,33 +114,29 @@ class AutoClicker:
                     }
                     img = np.array(sct.grab(monitor))
 
-                    if self.iteration_count % 1000 == 0:
-                        sleep = 1
-                    else:
-                        sleep = random.uniform(0.2, 0.5)
-
-                    time.sleep(sleep)
-
                     self.iteration_count += 1
 
-                    for tp in self.templates_plays:
-                        self.find_and_click_image(tp, img, monitor)
+                    [center_x, center_y] = self.find_image(button, img, monitor)
+                    
+                    if not center_x == -1:
+                        self.click_at(center_x, center_y, False)
+                        time.sleep(1)
 
+                    self.find_and_click_image(wepc, img, monitor)
 
 if __name__ == "__main__":
-    CLICK_IMAGES = [resource_path("media\\wepc.png")]
-
-    # ограничение кликов
-    # answer = None
-    # while answer is None:
-    #     answer = input("Укажите максимальное количество кликов (по-умолчнию: 70000): ")
-    #     if answer.isdigit() == False:
-    #         answer = 70000
-    max_clicks = 70000
-
+    CLICK_IMAGES = [resource_path("media\\wepc.png"), resource_path("media\\button.png")]
+    
     print('Для запуска скрипта нажми "ё" (`) на клавиатуре')
 
-    auto_clicker = AutoClicker("LDPlayer", max_clicks)
+    f = open('window_title.txt', 'r')
+    window_title = f.readline()
+
+    if window_title is None: 
+        window_title = "4yaGruppa"
+    f.close()
+    
+    auto_clicker = AutoClicker(window_title)
     try:
         auto_clicker.start()
     except Exception as e:
