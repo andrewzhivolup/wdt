@@ -3,7 +3,6 @@ import os
 import random
 import sys
 import time
-
 import cv2
 import keyboard
 import mss
@@ -12,24 +11,14 @@ import pygetwindow as gw
 import win32api
 import win32con
 
-
-# получаем файлы изображения если приложение открыто через .exe
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-        return str(os.path.join(base_path, relative_path))
-    except Exception:
-        return relative_path
-
 class AutoClicker:
     def __init__(self, window_title):
         self.window_title = window_title
-        self.running = False
+        self.is_running = False
         self.iteration_count = 0
-
         self.templates_plays = [
             cv2.cvtColor(cv2.imread(img, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2GRAY) for img in CLICK_IMAGES
-        ]  # картинки по которым нужно кликать
+        ] 
 
     @staticmethod
     def click_at(x, y, is_random):
@@ -49,29 +38,23 @@ class AutoClicker:
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, _x, _y, 0, 0)
 
     def toggle_script(self):
-        self.running = not self.running
+        self.is_running = not self.is_running
         print(f'Кликов было: {self.iteration_count}')
         self.iteration_count = 0
-        r_text = "вкл" if self.running else "выкл"
+        r_text = "вкл" if self.is_running else "выкл"
         print(f'Статус изменен: {r_text}')
 
-    def find_and_click_image(self, template_gray, screen, monitor):
+    def find_and_click_image(self, template_gray, screen, monitor, random: bool):
+        [center_x, center_y] = self.find_image_center(template_gray, screen, monitor)
 
-        screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGRA2GRAY)
-
-        result = cv2.matchTemplate(screen_gray, template_gray, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-        if max_val >= 0.6:
-            template_height, template_width = template_gray.shape
-            center_x = max_loc[0] + template_width // 2 + monitor["left"]
-            center_y = max_loc[1] + template_height // 2 + monitor["top"]
-            self.click_at(center_x, center_y, True)
+        if (not (center_x == -1 or  center_y == -1 )):  
+            self.click_at(center_x, center_y, random)
             return True
 
         return False
+
     
-    def find_image(self, template_gray, screen, monitor):
+    def find_image_center(self, template_gray, screen, monitor):
         screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGRA2GRAY)
 
         result = cv2.matchTemplate(screen_gray, template_gray, cv2.TM_CCOEFF_NORMED)
@@ -105,7 +88,7 @@ class AutoClicker:
             button = self.templates_plays[1]
 
             while True:
-                if self.running:
+                if self.is_running:
                     monitor = {
                         "top": window.top,
                         "left": window.left,
@@ -116,13 +99,19 @@ class AutoClicker:
 
                     self.iteration_count += 1
 
-                    [center_x, center_y] = self.find_image(button, img, monitor)
-                    
-                    if not center_x == -1:
-                        self.click_at(center_x, center_y, False)
+                    find_send_to_wallet = self.find_and_click_image( button, img, monitor, False)
+
+                    if find_send_to_wallet:
                         time.sleep(1)
 
-                    self.find_and_click_image(wepc, img, monitor)
+                    self.find_and_click_image(wepc, img, monitor, True)
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+        return str(os.path.join(base_path, relative_path))
+    except Exception:
+        return relative_path
 
 if __name__ == "__main__":
     CLICK_IMAGES = [resource_path("media\\wepc.png"), resource_path("media\\button.png")]
